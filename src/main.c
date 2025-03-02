@@ -29,6 +29,15 @@ int main()
     printf("\nFiltering by Age = 20:\n");
     filter_rows(&df, 1, 20);
 
+    printf("\nTesting read_csv function...\n");
+    DataFrame csv_df = {0};
+    if (read_csv(&csv_df, "data.csv") == 0) {
+        printf("\nData from CSV file:\n");
+        print_dataframe(&csv_df);
+    } else {
+        printf("Failed to read CSV file\n");
+    }
+
     printf("\nProgram completed successfully!\n");
     return 0;
 }

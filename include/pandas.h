@@ -18,5 +18,6 @@ void add_row(DataFrame *df, int row_data[]);
 void print_dataframe(const DataFrame *df);
 void select_column(const DataFrame *df, int column_index);
 void filter_rows(const DataFrame *df, int column_index, int value);
+int read_csv(DataFrame *df, const char *filename);
 
 #endif

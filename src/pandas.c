@@ -89,31 +89,79 @@ void filter_rows(const DataFrame *df, int column_index, int value)
     }
 }
 
-// int read_csv(DataFrame* df, const char *filename){
-//     FILE *file = fopen(filename, "r");
-//     if (!file){
-//         printf("Could not open file : %s",filename);
-//         return -1;
-//     }
-//     char line[1024]; // Max 1024 lines of CSV 
-//     int row = 0;
+int read_csv(DataFrame* df, const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        printf("Error: Could not open file '%s'\n", filename);
+        return -1;
+    }
 
-//     if (fgets(line, sizeof(line), file)){
-//         char* token = strtok(line,","); // tokenize line based on ,
-//         while (token && df->num_columns < MAX_COLUMNS){
-//             strncpy(df->column_names[df->num_columns++], token, MAX_COLUMN_NAME_LEN);
-//             token = strtok(NULL, ",");
-//         }
-//     }
-//     while (fgets(line, sizeof(line), file) && df->num_rows < MAX_ROWS){
-//         int col = 0;
-//         char* token = strtok(line, ",");
-//         while(token && col < df->num_columns){
-//             df->data[df->num_rows][col++] = atoi(token);
-//             token = strtok(NULL, ",");
-//         }
-//         df->num_rows++;
-//     }
-//     fclose(file);
-//     return 0;
-// }
+    char line[1024];
+    char *trimmed_token;
+    int row = 0;
+
+    // Read header row for column names
+    if (fgets(line, sizeof(line), file)) {
+        char *token = strtok(line, ",\n\r");
+        df->num_columns = 0;
+
+        while (token && df->num_columns < MAX_COLUMNS) {
+            // Remove leading/trailing whitespace
+            while (*token == ' ' || *token == '\t') token++;
+            trimmed_token = token;
+            int len = strlen(trimmed_token);
+            while (len > 0 && (trimmed_token[len-1] == ' ' || trimmed_token[len-1] == '\t')) {
+                trimmed_token[--len] = '\0';
+            }
+
+            strncpy(df->column_names[df->num_columns], trimmed_token, MAX_COLUMN_NAME_LEN - 1);
+            df->column_names[df->num_columns][MAX_COLUMN_NAME_LEN - 1] = '\0';
+            df->num_columns++;
+            token = strtok(NULL, ",\n\r");
+        }
+    } else {
+        printf("Error: Empty CSV file\n");
+        fclose(file);
+        return -1;
+    }
+
+    // Read data rows
+    df->num_rows = 0;
+    while (fgets(line, sizeof(line), file) && df->num_rows < MAX_ROWS) {
+        int col = 0;
+        char *token = strtok(line, ",\n\r");
+
+        while (token && col < df->num_columns) {
+            // Remove leading/trailing whitespace
+            while (*token == ' ' || *token == '\t') token++;
+            trimmed_token = token;
+            int len = strlen(trimmed_token);
+            while (len > 0 && (trimmed_token[len-1] == ' ' || trimmed_token[len-1] == '\t')) {
+                trimmed_token[--len] = '\0';
+            }
+
+            // Convert string to integer
+            char *endptr;
+            long val = strtol(trimmed_token, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("Error: Invalid integer value '%s' at row %d, column %d\n", 
+                       trimmed_token, df->num_rows + 1, col + 1);
+                fclose(file);
+                return -1;
+            }
+            df->data[df->num_rows][col++] = (int)val;
+            token = strtok(NULL, ",\n\r");
+        }
+
+        if (col < df->num_columns) {
+            printf("Error: Too few columns at row %d\n", df->num_rows + 1);
+            fclose(file);
+            return -1;
+        }
+
+        df->num_rows++;
+    }
+
+    fclose(file);
+    return 0;
+}
